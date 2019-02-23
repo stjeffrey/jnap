@@ -64,4 +64,8 @@ print router.stop_traceroute().content
 print router.get_traceroute_status().content
 
 
-
+macAddress = "91:a5:5d:a5:41:57"
+router.password("yourpassword")
+res =  router.block_internet_access(macAddress, False)
+#res = router.get_internet_block_status(macAddress)
+print res 

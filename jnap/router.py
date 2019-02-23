@@ -182,3 +182,58 @@ class Linksys:
     #                 notes - authentication required
     def get_traceroute_status(self):
         return self.do_action("diagnostics/GetTracerouteStatus",headers=self.auth())
+
+    def block_internet_access(self, macAddress, block):
+        rules = self.get_current_rules()
+        ruleFound = None
+
+        for rule in rules:
+            for ma in rule['macAddresses']:
+                if ma.upper() == macAddress.upper():
+                    ruleFound = rule
+
+        if ruleFound is None:
+            if block:
+                #if we want to disable and the mac address is not there then we don't need to do anything
+                return
+
+            ruleFound = self.create_new_rule(macAddress)
+            rules.append(ruleFound)
+        else:
+            rule['isEnabled'] = block
+        
+        newReq = {"isParentalControlEnabled":True, "rules": rules}
+        return self.do_action("parentalcontrol/SetParentalControlSettings",
+            headers=self.auth(),
+            data=newReq)
+
+    def get_current_rules(self):
+        res = self.do_action("parentalcontrol/GetParentalControlSettings",
+            headers=self.auth())
+
+        return res.json()["output"]["rules"]
+
+
+    def create_new_rule(self, macAddress):
+        return {
+            "isEnabled": True,
+            "macAddresses": [macAddress],
+            "description": "",
+            "blockedURLs": [],
+            "wanSchedule":{"sunday":"000000000000000000000000000000000000000000000000","monday":"000000000000000000000000000000000000000000000000","tuesday":"000000000000000000000000000000000000000000000000","wednesday":"000000000000000000000000000000000000000000000000","thursday":"000000000000000000000000000000000000000000000000","friday":"000000000000000000000000000000000000000000000000","saturday":"000000000000000000000000000000000000000000000000"}
+        }
+
+    def get_internet_block_status(self, macAddress):
+        rules = self.get_current_rules()
+        ruleFound = None
+
+        for rule in rules:
+            for ma in rule['macAddresses']:
+                if ma.upper() == macAddress.upper():
+                    ruleFound = rule
+        
+        if ruleFound is None:
+            #If the mac address isn't found then the internet is not blocked for this device
+            return False
+
+        return ruleFound['isEnabled']
